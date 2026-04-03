@@ -1,0 +1,219 @@
+<section class="feedback-form card shadow-sm mb-4">
+    <div class="card-header">
+        <h2 class="h5 mb-0">Часть 2. Форма обратной связи</h2>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <label class="form-label" for="fb-name">Имя пользователя</label>
+            <input id="fb-name" class="form-control @(string.IsNullOrEmpty(_userNameError) ? "" : "is-invalid")" type="text"
+                   value="@_userName" @oninput="OnUserNameInput" placeholder="Не менее 2 символов" />
+            @if (_userNameError is { } unErr)
+            {
+                <div class="invalid-feedback d-block">@unErr</div>
+            }
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="fb-email">Email</label>
+            <input id="fb-email" class="form-control @(string.IsNullOrEmpty(_emailError) ? "" : "is-invalid")" type="email"
+                   value="@_email" @oninput="OnEmailInput" placeholder="name@example.com" />
+            @if (_emailError is { } emErr)
+            {
+                <div class="invalid-feedback d-block">@emErr</div>
+            }
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="fb-msg">Сообщение</label>
+            <textarea id="fb-msg" class="form-control @(string.IsNullOrEmpty(_messageError) ? "" : "is-invalid")" rows="4"
+                      value="@_message" @oninput="OnMessageInput" placeholder="Текст сообщения (минимум 10 символов)"></textarea>
+            @if (_messageError is { } msgErr)
+            {
+                <div class="invalid-feedback d-block">@msgErr</div>
+            }
+        </div>
+        <div class="mb-3 p-3 bg-light rounded border">
+            <label class="form-label" for="fb-captcha">Капча: сколько будет @_captchaA + @_captchaB?</label>
+            <input id="fb-captcha" class="form-control @(string.IsNullOrEmpty(_captchaError) ? "" : "is-invalid")" type="text"
+                   inputmode="numeric" value="@_captchaInput" @oninput="OnCaptchaInput" />
+            @if (_captchaError is { } capErr)
+            {
+                <div class="invalid-feedback d-block">@capErr</div>
+            }
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-primary" @onclick="Submit" disabled="@(!IsFormValid)">Отправить</button>
+            <button type="button" class="btn btn-outline-secondary" @onclick="ClearForm">Очистить</button>
+        </div>
+
+        @if (_showSuccess)
+        {
+            <div class="alert alert-success mt-3 mb-0" role="status">Форма отправлена!</div>
+        }
+
+        @if (_submitted is { } s)
+        {
+            <hr class="my-4" />
+            <h3 class="h6 text-muted">Последняя отправка (сохранено в переменной)</h3>
+            <dl class="row mb-0 small">
+                <dt class="col-sm-3">Имя</dt>
+                <dd class="col-sm-9">@s.UserName</dd>
+                <dt class="col-sm-3">Email</dt>
+                <dd class="col-sm-9">@s.Email</dd>
+                <dt class="col-sm-3">Сообщение</dt>
+                <dd class="col-sm-9 text-break">@s.Message</dd>
+            </dl>
+        }
+    </div>
+</section>
+
+@code {
+    private string _userName = "";
+    private string _email = "";
+    private string _message = "";
+    private string _captchaInput = "";
+
+    private string? _userNameError;
+    private string? _emailError;
+    private string? _messageError;
+    private string? _captchaError;
+
+    private int _captchaA;
+    private int _captchaB;
+    private int _captchaExpected;
+
+    private FeedbackPayload? _submitted;
+    private bool _showSuccess;
+
+    protected override void OnInitialized()
+    {
+        RefreshCaptcha();
+    }
+
+    private void RefreshCaptcha()
+    {
+        var rng = Random.Shared;
+        _captchaA = rng.Next(1, 10);
+        _captchaB = rng.Next(1, 10);
+        _captchaExpected = _captchaA + _captchaB;
+        _captchaInput = "";
+        _captchaError = null;
+    }
+
+    private bool IsFormValid =>
+        string.IsNullOrEmpty(_userNameError) &&
+        string.IsNullOrEmpty(_emailError) &&
+        string.IsNullOrEmpty(_messageError) &&
+        string.IsNullOrEmpty(_captchaError) &&
+        !string.IsNullOrWhiteSpace(_userName) &&
+        !string.IsNullOrWhiteSpace(_email) &&
+        !string.IsNullOrWhiteSpace(_message) &&
+        int.TryParse(_captchaInput, out var c) && c == _captchaExpected;
+
+    private void OnUserNameInput(ChangeEventArgs e)
+    {
+        _userName = e.Value?.ToString() ?? "";
+        ValidateUserName();
+        _showSuccess = false;
+    }
+
+    private void OnEmailInput(ChangeEventArgs e)
+    {
+        _email = e.Value?.ToString() ?? "";
+        ValidateEmail();
+        _showSuccess = false;
+    }
+
+    private void OnMessageInput(ChangeEventArgs e)
+    {
+        _message = e.Value?.ToString() ?? "";
+        ValidateMessage();
+        _showSuccess = false;
+    }
+
+    private void OnCaptchaInput(ChangeEventArgs e)
+    {
+        _captchaInput = e.Value?.ToString() ?? "";
+        ValidateCaptcha();
+        _showSuccess = false;
+    }
+
+    private void ValidateUserName()
+    {
+        if (string.IsNullOrWhiteSpace(_userName))
+            _userNameError = "Введите имя пользователя.";
+        else if (_userName.Trim().Length < 2)
+            _userNameError = "Имя должно содержать не менее 2 символов.";
+        else
+            _userNameError = null;
+    }
+
+    private void ValidateEmail()
+    {
+        var v = _email.Trim();
+        if (string.IsNullOrWhiteSpace(v))
+        {
+            _emailError = "Введите email.";
+            return;
+        }
+        if (!System.Text.RegularExpressions.Regex.IsMatch(v,
+                @"^[^@\s]+@[^@\s]+\.[^@\s]+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+        {
+            _emailError = "Некорректный формат email.";
+            return;
+        }
+        _emailError = null;
+    }
+
+    private void ValidateMessage()
+    {
+        if (string.IsNullOrWhiteSpace(_message))
+            _messageError = "Введите текст сообщения.";
+        else if (_message.Trim().Length < 10)
+            _messageError = "Сообщение должно быть не короче 10 символов.";
+        else
+            _messageError = null;
+    }
+
+    private void ValidateCaptcha()
+    {
+        if (string.IsNullOrWhiteSpace(_captchaInput))
+        {
+            _captchaError = "Введите ответ.";
+            return;
+        }
+        if (!int.TryParse(_captchaInput.Trim(), out var n) || n != _captchaExpected)
+        {
+            _captchaError = "Неверный ответ.";
+            return;
+        }
+        _captchaError = null;
+    }
+
+    private void Submit()
+    {
+        ValidateUserName();
+        ValidateEmail();
+        ValidateMessage();
+        ValidateCaptcha();
+        if (!IsFormValid)
+            return;
+
+        _submitted = new FeedbackPayload(_userName.Trim(), _email.Trim(), _message.Trim());
+        _showSuccess = true;
+        RefreshCaptcha();
+    }
+
+    private void ClearForm()
+    {
+        _userName = "";
+        _email = "";
+        _message = "";
+        _userNameError = null;
+        _emailError = null;
+        _messageError = null;
+        _showSuccess = false;
+        _submitted = null;
+        RefreshCaptcha();
+    }
+
+    private sealed record FeedbackPayload(string UserName, string Email, string Message);
+}

@@ -1,0 +1,80 @@
+<section class="form-component card shadow-sm mb-4">
+    <div class="card-header">
+        <h2 class="h5 mb-0">Часть 1. Форма ввода</h2>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label" for="fc-name">Имя</label>
+                <input id="fc-name" class="form-control" type="text" value="@_name"
+                       @oninput="OnNameInput" placeholder="Введите имя" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="fc-age">Возраст</label>
+                <input id="fc-age" class="form-control" type="number" min="0" max="150" value="@_ageText"
+                       @oninput="OnAgeInput" />
+            </div>
+            <div class="col-md-3">
+                <span class="form-label d-block">Пол</span>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="fc-gender" id="fc-m" checked="@(_gender == Gender.Male)"
+                           @onchange="@(() => OnGenderChange(Gender.Male))" />
+                    <label class="form-check-label" for="fc-m">Мужской</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="fc-gender" id="fc-f" checked="@(_gender == Gender.Female)"
+                           @onchange="@(() => OnGenderChange(Gender.Female))" />
+                    <label class="form-check-label" for="fc-f">Женский</label>
+                </div>
+            </div>
+        </div>
+        <button type="button" class="btn btn-outline-secondary mt-3" @onclick="ResetForm">Сбросить</button>
+
+        <hr class="my-4" />
+        <h3 class="h6 text-muted">Текущие значения</h3>
+        <dl class="row mb-0 small">
+            <dt class="col-sm-3">Имя</dt>
+            <dd class="col-sm-9">@(string.IsNullOrWhiteSpace(_name) ? "—" : _name)</dd>
+            <dt class="col-sm-3">Возраст</dt>
+            <dd class="col-sm-9">@(_age.HasValue ? _age.Value.ToString() : "—")</dd>
+            <dt class="col-sm-3">Пол</dt>
+            <dd class="col-sm-9">@(_gender == Gender.Male ? "Мужской" : "Женский")</dd>
+        </dl>
+    </div>
+</section>
+
+@code {
+    private enum Gender { Male, Female }
+
+    private string _name = "";
+    private string _ageText = "";
+    private int? _age;
+    private Gender _gender = Gender.Male;
+
+    private void OnNameInput(ChangeEventArgs e)
+    {
+        _name = e.Value?.ToString() ?? "";
+    }
+
+    private void OnAgeInput(ChangeEventArgs e)
+    {
+        _ageText = e.Value?.ToString() ?? "";
+        if (int.TryParse(_ageText, out var v) && v >= 0)
+            _age = v;
+        else
+            _age = null;
+    }
+
+    private void OnGenderChange(Gender value)
+    {
+        _gender = value;
+    }
+
+    private void ResetForm()
+    {
+        _name = "";
+        _ageText = "";
+        _age = null;
+        _gender = Gender.Male;
+    }
+}
